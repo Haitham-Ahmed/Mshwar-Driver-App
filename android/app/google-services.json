@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "324143885054",
+    "project_id": "mshwar-app-f475e",
+    "storage_bucket": "mshwar-app-f475e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:324143885054:android:5cac2becfc3037b5f493af",
+        "android_client_info": {
+          "package_name": "com.mshwar.appdriver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwQ9x3jI_G-Zgyesm2naysMLlu559RiSk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

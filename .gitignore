@@ -1,0 +1,13 @@
+# General build directory
+build/
+
+# Flutter and Android generated files
+.dart_tool/
+.flutter-plugins-dependencies
+android/.gradle/
+android/.kotlin/
+android/local.properties
+
+# Android signing credentials
+android/key.properties
+android/app/*.jks
