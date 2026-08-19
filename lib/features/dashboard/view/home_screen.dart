@@ -233,49 +233,53 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Iconsax.user,
-                      size: 16,
-                      color: Colors.white,
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(
+                        Iconsax.user,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 4),
-                    CustomText(
-                      text: userData.email != null &&
-                              userData.email.toString().isNotEmpty
-                          ? userData.email.toString().split('@').first
-                          : "Driver".tr,
-                      size: 14,
-                      weight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.5),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: controller.isActive.value
-                            ? ConstantColors.primary.withOpacity(0.2)
-                            : AppThemeData.grey500.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: CustomText(
-                        text: controller.isActive.value
-                            ? "● Online".tr
-                            : "● Offline".tr,
-                        size: 11,
-                        color: controller.isActive.value
-                            ? ConstantColors.primary
-                            : AppThemeData.grey400,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CustomText(
+                            text: userData.email != null &&
+                                    userData.email.toString().isNotEmpty
+                                ? userData.email.toString().split('@').first
+                                : "Driver".tr,
+                            size: 14,
+                            weight: FontWeight.w600,
+                            color: Colors.white,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: controller.isActive.value
+                                  ? ConstantColors.primary.withOpacity(0.2)
+                                  : AppThemeData.grey500.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: CustomText(
+                              text: controller.isActive.value
+                                  ? "● Online".tr
+                                  : "● Offline".tr,
+                              size: 11,
+                              color: controller.isActive.value
+                                  ? ConstantColors.primary
+                                  : AppThemeData.grey400,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

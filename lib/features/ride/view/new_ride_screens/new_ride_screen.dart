@@ -733,6 +733,8 @@ class _NewRideScreenState extends State<NewRideScreen>
                                       ? AppThemeData.grey900Dark
                                       : AppThemeData.grey900,
                                   weight: FontWeight.w600,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 CustomText(
@@ -741,6 +743,8 @@ class _NewRideScreenState extends State<NewRideScreen>
                                   color: isDarkMode
                                       ? AppThemeData.grey500Dark
                                       : AppThemeData.grey500,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             )
@@ -755,6 +759,8 @@ class _NewRideScreenState extends State<NewRideScreen>
                                       ? AppThemeData.grey900Dark
                                       : AppThemeData.grey900,
                                   weight: FontWeight.w600,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
                                 StarRating(
