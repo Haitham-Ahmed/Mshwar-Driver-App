@@ -33,17 +33,6 @@ target 'Runner' do
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-  Dir.glob(File.expand_path('.symlinks/plugins/**/Package.swift', File.join(__dir__, '..'))).each do |package_manifest|
-    package_source = File.read(package_manifest)
-    normalized_source = package_source.sub(/^\s*\/\/\s*swift-tools-version[^\r\n]*\r?\n/, "// swift-tools-version: 5.9\n")
-    if normalized_source == package_source
-      normalized_source = "// swift-tools-version: 5.9\n#{package_source}"
-    end
-    unless normalized_source == package_source
-      File.write(package_manifest, normalized_source)
-    end
-  end
-
   target 'RunnerTests' do
     inherit! :search_paths
   end
