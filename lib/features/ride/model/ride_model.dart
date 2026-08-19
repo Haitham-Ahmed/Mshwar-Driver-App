@@ -16,13 +16,18 @@ class RideModel {
     success = json['success'];
     error = json['error'];
     message = json['message'];
-    timeduration = int.parse(json['time_duration'].toString());
-    // Safely parse data list - handle String, List, or null
-    var dataRaw = json['data'];
-    if (dataRaw != null && dataRaw is List && dataRaw.isNotEmpty) {
-      data = <RideData>[];
-      for (var v in dataRaw) {
-        data!.add(RideData.fromJson(v));
+    timeduration = int.tryParse(json['time_duration']?.toString() ?? '');
+
+    // The API may return an empty list, a JSON-encoded list, or no data at all.
+    // Always initialise the list so a valid empty response is not treated as a
+    // parsing failure by the caller.
+    final dataRaw = _decodeJsonValue(json['data']);
+    data = <RideData>[];
+    if (dataRaw is List) {
+      for (final item in dataRaw) {
+        if (item is Map) {
+          data!.add(RideData.fromJson(Map<String, dynamic>.from(item)));
+        }
       }
     }
   }
@@ -162,8 +167,8 @@ class RideData {
   RideData.fromJson(Map<String, dynamic> json) {
     List<TaxModel>? taxList = [];
     // Safely parse tax list - handle String, List, or null
-    var taxRaw = json['tax'];
-    if (taxRaw != null && taxRaw is List && taxRaw.isNotEmpty) {
+    final taxRaw = _decodeJsonValue(json['tax']);
+    if (taxRaw is List && taxRaw.isNotEmpty) {
       taxList = <TaxModel>[];
       for (var v in taxRaw) {
         taxList.add(TaxModel.fromJson(v));
@@ -182,8 +187,8 @@ class RideData {
     place = json['place'].toString();
     statut = json['statut'].toString();
     // Safely parse stops list - handle String, List, or null
-    var stopsRaw = json['stops'];
-    if (stopsRaw != null && stopsRaw is List && stopsRaw.isNotEmpty) {
+    final stopsRaw = _decodeJsonValue(json['stops']);
+    if (stopsRaw is List && stopsRaw.isNotEmpty) {
       stops = <Stops>[];
       for (var v in stopsRaw) {
         stops!.add(Stops.fromJson(v));
@@ -191,20 +196,9 @@ class RideData {
     } else {
       stops = [];
     }
-    if (json['user_info'] != null && json['user_info'].runtimeType == String) {
-      String fixed = json['user_info']
-          .trim()
-          .replaceAll('{', '{"')
-          .replaceAll(': ', '": "')
-          .replaceAll(', ', '", "')
-          .replaceAll('}', '"}');
-      print(json['user_info'].runtimeType);
-      // final dt = jsonDecode(json['user_info']);
-      final Map<String, dynamic> userMap = jsonDecode(fixed);
-
-      userInfo = UserInfo.fromJson(userMap);
-    } else if (json['user_info'] != null) {
-      userInfo = UserInfo.fromJson(json['user_info']);
+    final userInfoRaw = _decodeJsonValue(json['user_info']);
+    if (userInfoRaw is Map) {
+      userInfo = UserInfo.fromJson(Map<String, dynamic>.from(userInfoRaw));
     }
     idConducteur = json['id_conducteur'].toString();
     creer = json['creer'].toString();
@@ -320,6 +314,20 @@ class RideData {
     }
     data['tax'] = taxModel?.map((v) => v.toJson()).toList();
     return data;
+  }
+}
+
+dynamic _decodeJsonValue(dynamic value) {
+  if (value is! String) return value;
+
+  final trimmed = value.trim();
+  if (trimmed.isEmpty || trimmed == 'null') return null;
+
+  try {
+    return jsonDecode(trimmed);
+  } on FormatException {
+    // Some legacy API responses contain a plain string instead of JSON.
+    return value;
   }
 }
 

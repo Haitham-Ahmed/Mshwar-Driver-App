@@ -55,6 +55,7 @@ class NewRideController extends GetxController with WidgetsBindingObserver {
   }
 
   Timer? timer;
+  bool _isFetchingRides = false;
 
   void startTimer() {
     stopTimer(); // Stop any existing timer first
@@ -118,12 +119,17 @@ class NewRideController extends GetxController with WidgetsBindingObserver {
 
   getUsrData() async {
     userModel.value = Constant.getUserData();
+    final currentUser = userModel.value.userData;
+    if (currentUser == null) {
+      log('Cannot refresh driver profile: no locally stored user data.');
+      return;
+    }
 
     Map<String, String> bodyParams = {
-      'phone': userModel.value.userData!.phone.toString(),
+      'phone': currentUser.phone.toString(),
       'user_cat': "driver",
-      'email': userModel.value.userData!.email.toString(),
-      'login_type': userModel.value.userData!.loginType.toString(),
+      'email': currentUser.email.toString(),
+      'login_type': currentUser.loginType.toString(),
     };
     final response = await http.post(Uri.parse(API.getProfileByPhone),
         headers: API.header, body: jsonEncode(bodyParams));
@@ -158,16 +164,28 @@ class NewRideController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<dynamic> getNewRide({bool isInit = false}) async {
+    if (_isFetchingRides) return null;
+    _isFetchingRides = true;
     try {
       if (isInit) {
         ShowToastDialog.showLoader("Please wait");
       }
-      final response = await http.get(
-          Uri.parse(
-              "${API.driverAllRides}?id_driver=${Preferences.getInt(Preferences.userId)}"),
-          headers: API.header);
+      final driverId = Preferences.getInt(Preferences.userId);
+      if (driverId <= 0) {
+        throw StateError('Missing driver id; please sign in again.');
+      }
+      final response = await http
+          .get(
+            Uri.parse("${API.driverAllRides}?id_driver=$driverId"),
+            headers: API.header,
+          )
+          .timeout(const Duration(seconds: 20));
 
-      Map<String, dynamic> responseBody = json.decode(response.body);
+      final decodedBody = json.decode(response.body);
+      if (decodedBody is! Map<String, dynamic>) {
+        throw const FormatException('Unexpected rides response format.');
+      }
+      final responseBody = decodedBody;
 
       showLog(
           "API :: URL :: ${API.driverAllRides}?id_driver=${Preferences.getInt(Preferences.userId)}");
@@ -179,9 +197,11 @@ class NewRideController extends GetxController with WidgetsBindingObserver {
         isLoading.value = false;
         try {
           RideModel model = RideModel.fromJson(responseBody);
-          rideList.value = model.data!;
+          rideList.value = model.data ?? <RideData>[];
         } catch (e) {
-          print(e);
+          log('Failed to parse rides response: $e');
+          isLoading.value = false;
+          ShowToastDialog.closeLoader();
           return null;
         }
 
@@ -189,7 +209,6 @@ class NewRideController extends GetxController with WidgetsBindingObserver {
         ShowToastDialog.closeLoader();
         update();
       } else {
-        rideList.clear();
         isLoading.value = false;
         ShowToastDialog.closeLoader();
       }
@@ -207,8 +226,12 @@ class NewRideController extends GetxController with WidgetsBindingObserver {
       ShowToastDialog.closeLoader();
       // ShowToastDialog.showToast(e.toString());
     } catch (e) {
+      isLoading.value = false;
       ShowToastDialog.closeLoader();
+      log('Failed to load rides: $e');
       // ShowToastDialog.showToast(e.toString());
+    } finally {
+      _isFetchingRides = false;
     }
     return null;
   }

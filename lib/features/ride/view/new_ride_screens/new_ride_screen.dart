@@ -79,6 +79,7 @@ class _NewRideScreenState extends State<NewRideScreen>
 
     return GetX<NewRideController>(
       builder: (controller) {
+        final userData = controller.userModel.value.userData;
         return Scaffold(
             key: _scaffoldKey,
             appBar: CustomAppBar(
@@ -91,59 +92,58 @@ class _NewRideScreenState extends State<NewRideScreen>
             drawer: buildAppDrawer(context, controllerDashBoard),
             body: RefreshIndicator(
               onRefresh: () => controller.getNewRide(),
-              child: Padding(
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Column(
-                  children: [
-                    if ((double.tryParse(controller
-                                .userModel.value.userData!.amount
-                                .toString()) ??
-                            0) <
-                        (double.tryParse(
-                                Constant.minimumWalletBalance ?? '0') ??
-                            0))
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: ConstantColors.blue),
-                        child: Text(
-                          "${"Your wallet balance must be".tr} ${Constant().amountShow(amount: Constant.minimumWalletBalance!.toString())} ${"to get ride.".tr}",
-                          style: TextStyle(
-                            color: AppThemeData.grey50,
-                            fontSize: 14,
-                            fontFamily: AppThemeData.medium,
-                          ),
+                children: [
+                  if (userData != null &&
+                      (double.tryParse(userData.amount.toString()) ?? 0) <
+                          (double.tryParse(
+                                  Constant.minimumWalletBalance ?? '0') ??
+                              0))
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: ConstantColors.blue),
+                      child: Text(
+                        "${"Your wallet balance must".tr} ${Constant().amountShow(amount: Constant.minimumWalletBalance!.toString())} ${"to get ride.".tr}",
+                        style: TextStyle(
+                          color: AppThemeData.grey50,
+                          fontSize: 14,
+                          fontFamily: AppThemeData.medium,
                         ),
                       ),
-                    // Filter Tabs
-                    _buildFilterTabs(controller, themeChange.getThem()),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: controller.isLoading.value
-                          ? const SizedBox()
-                          : controller.filteredRideList.isEmpty
-                              ? Constant.emptyView(
-                                  controller.selectedFilter.value == 'all'
-                                      ? "You don't have any ride booked."
-                                      : "No ${controller.selectedFilter.value} rides found.",
-                                  context)
-                              : ListView.builder(
-                                  itemCount: controller.filteredRideList.length,
-                                  shrinkWrap: true,
-                                  itemBuilder: (context, index) {
-                                    return newRideWidgets(
-                                      context,
-                                      controller.filteredRideList[index],
-                                      controller,
-                                      themeChange.getThem(),
-                                    );
-                                  }),
                     ),
-                  ],
-                ),
+                  _buildFilterTabs(controller, themeChange.getThem()),
+                  const SizedBox(height: 12),
+                  if (controller.isLoading.value)
+                    const SizedBox(
+                      height: 200,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (controller.filteredRideList.isEmpty)
+                    SizedBox(
+                      height: 400,
+                      child: Constant.emptyView(
+                        controller.selectedFilter.value == 'all'
+                            ? "You don't have any ride booked."
+                            : "No ${controller.selectedFilter.value} rides found.",
+                        context,
+                      ),
+                    )
+                  else
+                    ...controller.filteredRideList.map(
+                      (ride) => newRideWidgets(
+                        context,
+                        ride,
+                        controller,
+                        themeChange.getThem(),
+                      ),
+                    ),
+                ],
               ),
             ));
       },
@@ -676,110 +676,119 @@ class _NewRideScreenState extends State<NewRideScreen>
                   ),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Avatar
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: ConstantColors.blue.withOpacity(0.3),
-                          width: 2,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: data.photoPath.toString(),
-                          height: 50,
-                          width: 50,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            height: 50,
-                            width: 50,
-                            color: AppThemeData.grey200,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                        // Avatar
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: ConstantColors.blue.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: data.photoPath.toString(),
+                              height: 50,
+                              width: 50,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                height: 50,
+                                width: 50,
+                                color: AppThemeData.grey200,
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                height: 50,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: AppThemeData.grey200,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Iconsax.user,
+                                  color: AppThemeData.grey400,
+                                  size: 24,
+                                ),
                               ),
                             ),
                           ),
-                          errorWidget: (context, url, error) => Container(
-                            height: 50,
-                            width: 50,
-                            decoration: BoxDecoration(
-                              color: AppThemeData.grey200,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Iconsax.user,
-                              color: AppThemeData.grey400,
-                              size: 24,
-                            ),
-                          ),
                         ),
-                      ),
-                    ),
+                        const SizedBox(width: 12),
+                        // Customer Info
+                        Expanded(
+                          child: data.rideType! == 'driver' &&
+                                  data.existingUserId.toString() == "null"
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CustomText(
+                                      text: data.userInfo?.name ??
+                                          '${data.prenom ?? ''} ${data.nom ?? ''}'
+                                              .trim(),
+                                      size: 15,
+                                      color: isDarkMode
+                                          ? AppThemeData.grey900Dark
+                                          : AppThemeData.grey900,
+                                      weight: FontWeight.w600,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    CustomText(
+                                      text: data.userInfo?.email ??
+                                          data.phone ??
+                                          '',
+                                      size: 12,
+                                      color: isDarkMode
+                                          ? AppThemeData.grey500Dark
+                                          : AppThemeData.grey500,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CustomText(
+                                      text:
+                                          '${data.prenom.toString()} ${data.nom.toString()}',
+                                      size: 15,
+                                      color: isDarkMode
+                                          ? AppThemeData.grey900Dark
+                                          : AppThemeData.grey900,
+                                      weight: FontWeight.w600,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    FittedBox(
+                                      alignment: Alignment.centerLeft,
+                                      fit: BoxFit.scaleDown,
+                                      child: StarRating(
+                                        size: 16,
+                                        rating: double.tryParse(data
+                                                .moyenneDriver
+                                                .toString()) ??
+                                            0.0,
+                                        color: AppThemeData.warning200,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
                     const SizedBox(width: 12),
-                    // Customer Info
-                    Expanded(
-                      child: data.rideType! == 'driver' &&
-                              data.existingUserId.toString() == "null"
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CustomText(
-                                  text: data.userInfo!.name ?? '',
-                                  size: 15,
-                                  color: isDarkMode
-                                      ? AppThemeData.grey900Dark
-                                      : AppThemeData.grey900,
-                                  weight: FontWeight.w600,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                CustomText(
-                                  text: data.userInfo!.email ?? '',
-                                  size: 12,
-                                  color: isDarkMode
-                                      ? AppThemeData.grey500Dark
-                                      : AppThemeData.grey500,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            )
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CustomText(
-                                  text:
-                                      '${data.prenom.toString()} ${data.nom.toString()}',
-                                  size: 15,
-                                  color: isDarkMode
-                                      ? AppThemeData.grey900Dark
-                                      : AppThemeData.grey900,
-                                  weight: FontWeight.w600,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 6),
-                                FittedBox(
-                                  alignment: Alignment.centerLeft,
-                                  fit: BoxFit.scaleDown,
-                                  child: StarRating(
-                                    size: 16,
-                                    rating: double.tryParse(
-                                            data.moyenneDriver.toString()) ??
-                                        0.0,
-                                    color: AppThemeData.warning200,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                    // Action Buttons
-                    Flexible(
-                      fit: FlexFit.loose,
+                    // Keep the controls in the same row as in the original
+                    // card design, while reserving a fixed width for them.
+                    // This leaves the middle section flexible on narrow phones.
+                    SizedBox(
+                      width: 84,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -838,7 +847,8 @@ class _NewRideScreenState extends State<NewRideScreen>
                                         data.existingUserId.toString() ==
                                             "null") {
                                       Constant.makePhoneCall(
-                                          data.userInfo!.phone.toString());
+                                          (data.userInfo?.phone ?? data.phone)
+                                              .toString());
                                     } else {
                                       Constant.makePhoneCall(
                                           data.phone.toString());
@@ -870,17 +880,15 @@ class _NewRideScreenState extends State<NewRideScreen>
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Flexible(
-                            child: CustomText(
-                              text:
-                                  '${data.dateRetour.toString()} ${data.heureRetour.toString()}',
-                              size: 11,
-                              color: isDarkMode
-                                  ? AppThemeData.grey500Dark
-                                  : AppThemeData.grey500,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          CustomText(
+                            text:
+                                '${data.dateRetour.toString()} ${data.heureRetour.toString()}',
+                            size: 11,
+                            color: isDarkMode
+                                ? AppThemeData.grey500Dark
+                                : AppThemeData.grey500,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

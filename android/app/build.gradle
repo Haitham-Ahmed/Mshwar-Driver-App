@@ -28,7 +28,9 @@ if (flutterVersionName == null) {
 android {
     namespace "com.mshwar.appdriver"
     compileSdkVersion 36
-    ndkVersion "26.1.10909125"
+    // Required by the Flutter plugins (Firebase, maps, location, etc.).
+    // Newer NDK versions remain backward-compatible with the application.
+    ndkVersion "27.0.12077973"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
