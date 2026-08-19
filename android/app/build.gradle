@@ -55,28 +55,40 @@ android {
         keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
     }
 
+    def releaseKeystore = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+    def isReleaseBuild = gradle.startParameter.taskNames.any { taskName ->
+        taskName.toLowerCase().contains('release')
+    }
+    if (isReleaseBuild && (!releaseKeystore || !releaseKeystore.exists())) {
+        throw new RuntimeException("Missing release keystore: ${releaseKeystore}. Restore the original keystore used by Google Play.")
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.mshwar.appdriver"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 11
+        versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
     }
 
      signingConfigs {
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
+        if (releaseKeystore && releaseKeystore.exists()) {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile releaseKeystore
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (releaseKeystore && releaseKeystore.exists()) {
+                signingConfig signingConfigs.release
+            }
             shrinkResources false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
