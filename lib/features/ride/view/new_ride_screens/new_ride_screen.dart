@@ -763,115 +763,127 @@ class _NewRideScreenState extends State<NewRideScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
-                                StarRating(
-                                  size: 16,
-                                  rating: double.tryParse(
-                                          data.moyenneDriver.toString()) ??
-                                      0.0,
-                                  color: AppThemeData.warning200,
+                                FittedBox(
+                                  alignment: Alignment.centerLeft,
+                                  fit: BoxFit.scaleDown,
+                                  child: StarRating(
+                                    size: 16,
+                                    rating: double.tryParse(
+                                            data.moyenneDriver.toString()) ??
+                                        0.0,
+                                    color: AppThemeData.warning200,
+                                  ),
                                 ),
                               ],
                             ),
                     ),
                     // Action Buttons
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            // Navigate Button - Open external maps
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () async {
-                                  // Open external map with directions
-                                  await Constant.redirectMap(
-                                    departureName: data.departName.toString(),
-                                    originLat: double.tryParse(
-                                        data.latitudeDepart.toString()),
-                                    originLng: double.tryParse(
-                                        data.longitudeDepart.toString()),
-                                    arriveName: data.destinationName.toString(),
-                                    latitude: double.tryParse(
-                                        data.latitudeArrivee.toString()),
-                                    longLatitude: double.tryParse(
-                                        data.longitudeArrivee.toString()),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppThemeData.secondary200,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppThemeData.secondary200
-                                            .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Iconsax.routing_2,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Phone Button
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  if (data.rideType! == 'driver' &&
-                                      data.existingUserId.toString() ==
-                                          "null") {
-                                    Constant.makePhoneCall(
-                                        data.userInfo!.phone.toString());
-                                  } else {
-                                    Constant.makePhoneCall(
-                                        data.phone.toString());
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: ConstantColors.blue,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: ConstantColors.blue
-                                            .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Iconsax.call,
-                                    color: Colors.white,
-                                    size: 18,
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              // Navigate Button - Open external maps
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () async {
+                                    // Open external map with directions
+                                    await Constant.redirectMap(
+                                      departureName: data.departName.toString(),
+                                      originLat: double.tryParse(
+                                          data.latitudeDepart.toString()),
+                                      originLng: double.tryParse(
+                                          data.longitudeDepart.toString()),
+                                      arriveName:
+                                          data.destinationName.toString(),
+                                      latitude: double.tryParse(
+                                          data.latitudeArrivee.toString()),
+                                      longLatitude: double.tryParse(
+                                          data.longitudeArrivee.toString()),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppThemeData.secondary200,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppThemeData.secondary200
+                                              .withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Iconsax.routing_2,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              // Phone Button
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    if (data.rideType! == 'driver' &&
+                                        data.existingUserId.toString() ==
+                                            "null") {
+                                      Constant.makePhoneCall(
+                                          data.userInfo!.phone.toString());
+                                    } else {
+                                      Constant.makePhoneCall(
+                                          data.phone.toString());
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: ConstantColors.blue,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: ConstantColors.blue
+                                              .withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Iconsax.call,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Flexible(
+                            child: CustomText(
+                              text:
+                                  '${data.dateRetour.toString()} ${data.heureRetour.toString()}',
+                              size: 11,
+                              color: isDarkMode
+                                  ? AppThemeData.grey500Dark
+                                  : AppThemeData.grey500,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        CustomText(
-                          text:
-                              '${data.dateRetour.toString()} ${data.heureRetour.toString()}',
-                          size: 11,
-                          color: isDarkMode
-                              ? AppThemeData.grey500Dark
-                              : AppThemeData.grey500,
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
