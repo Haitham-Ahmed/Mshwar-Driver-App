@@ -360,7 +360,10 @@ class DashBoardController extends GetxController {
 
     // Movement filters can suppress callbacks while the driver is stationary.
     // Keep the server timestamp fresh so the live map still shows the driver.
-    _locationHeartbeat = Timer.periodic(const Duration(seconds: 15), (_) async {
+    // A stationary driver may not trigger a GPS movement callback.  Refresh
+    // their last-seen timestamp every five seconds while they are online so
+    // the admin live map keeps the driver green and current.
+    _locationHeartbeat = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!isActive.value || _locationPublishInFlight) return;
       try {
         final current = _lastLocation ?? await location.getLocation();

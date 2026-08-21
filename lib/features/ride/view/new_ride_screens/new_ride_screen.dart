@@ -73,6 +73,32 @@ class _NewRideScreenState extends State<NewRideScreen>
     }
   }
 
+  /// Opens navigation from the driver's current device location.
+  ///
+  /// Address taps supply their own destination. Other controls use the ride
+  /// status: pickup before the trip starts and final destination on the ride.
+  Future<void> _openRideNavigation(
+    RideData data, {
+    bool? toPickup,
+  }) async {
+    final navigateToPickup =
+        toPickup ?? data.statut?.toLowerCase() != 'on ride';
+
+    await Constant.redirectMap(
+      arriveName: navigateToPickup
+          ? data.departName.toString()
+          : data.destinationName.toString(),
+      latitude: double.tryParse(
+        (navigateToPickup ? data.latitudeDepart : data.latitudeArrivee)
+            .toString(),
+      ),
+      longLatitude: double.tryParse(
+        (navigateToPickup ? data.longitudeDepart : data.longitudeArrivee)
+            .toString(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
@@ -262,15 +288,7 @@ class _NewRideScreenState extends State<NewRideScreen>
             controller.getNewRide();
           }
         } else {
-          // Open external map with directions
-          await Constant.redirectMap(
-            departureName: data.departName.toString(),
-            originLat: double.tryParse(data.latitudeDepart.toString()),
-            originLng: double.tryParse(data.longitudeDepart.toString()),
-            arriveName: data.destinationName.toString(),
-            latitude: double.tryParse(data.latitudeArrivee.toString()),
-            longLatitude: double.tryParse(data.longitudeArrivee.toString()),
-          );
+          await _openRideNavigation(data);
         }
       },
       borderRadius: BorderRadius.circular(20),
@@ -331,20 +349,9 @@ class _NewRideScreenState extends State<NewRideScreen>
                                 Expanded(
                                   child: InkWell(
                                     onTap: () async {
-                                      // Open external map with directions to pickup
-                                      await Constant.redirectMap(
-                                        departureName:
-                                            data.departName.toString(),
-                                        originLat: double.tryParse(
-                                            data.latitudeDepart.toString()),
-                                        originLng: double.tryParse(
-                                            data.longitudeDepart.toString()),
-                                        arriveName:
-                                            data.destinationName.toString(),
-                                        latitude: double.tryParse(
-                                            data.latitudeArrivee.toString()),
-                                        longLatitude: double.tryParse(
-                                            data.longitudeArrivee.toString()),
+                                      await _openRideNavigation(
+                                        data,
+                                        toPickup: true,
                                       );
                                     },
                                     child: Column(
@@ -418,20 +425,9 @@ class _NewRideScreenState extends State<NewRideScreen>
                                 Expanded(
                                   child: InkWell(
                                     onTap: () async {
-                                      // Open external map with directions to destination
-                                      await Constant.redirectMap(
-                                        departureName:
-                                            data.departName.toString(),
-                                        originLat: double.tryParse(
-                                            data.latitudeDepart.toString()),
-                                        originLng: double.tryParse(
-                                            data.longitudeDepart.toString()),
-                                        arriveName:
-                                            data.destinationName.toString(),
-                                        latitude: double.tryParse(
-                                            data.latitudeArrivee.toString()),
-                                        longLatitude: double.tryParse(
-                                            data.longitudeArrivee.toString()),
+                                      await _openRideNavigation(
+                                        data,
+                                        toPickup: false,
                                       );
                                     },
                                     child: Column(
@@ -678,111 +674,109 @@ class _NewRideScreenState extends State<NewRideScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                        // Avatar
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: ConstantColors.blue.withOpacity(0.3),
-                              width: 2,
+                    // Avatar
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ConstantColors.blue.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: data.photoPath.toString(),
+                          height: 50,
+                          width: 50,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            height: 50,
+                            width: 50,
+                            color: AppThemeData.grey200,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
                             ),
                           ),
-                          child: ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: data.photoPath.toString(),
-                              height: 50,
-                              width: 50,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                height: 50,
-                                width: 50,
-                                color: AppThemeData.grey200,
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                          errorWidget: (context, url, error) => Container(
+                            height: 50,
+                            width: 50,
+                            decoration: BoxDecoration(
+                              color: AppThemeData.grey200,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Iconsax.user,
+                              color: AppThemeData.grey400,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Customer Info
+                    Expanded(
+                      child: data.rideType! == 'driver' &&
+                              data.existingUserId.toString() == "null"
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CustomText(
+                                  text: data.userInfo?.name ??
+                                      '${data.prenom ?? ''} ${data.nom ?? ''}'
+                                          .trim(),
+                                  size: 15,
+                                  color: isDarkMode
+                                      ? AppThemeData.grey900Dark
+                                      : AppThemeData.grey900,
+                                  weight: FontWeight.w600,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                CustomText(
+                                  text:
+                                      data.userInfo?.email ?? data.phone ?? '',
+                                  size: 12,
+                                  color: isDarkMode
+                                      ? AppThemeData.grey500Dark
+                                      : AppThemeData.grey500,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CustomText(
+                                  text:
+                                      '${data.prenom.toString()} ${data.nom.toString()}',
+                                  size: 15,
+                                  color: isDarkMode
+                                      ? AppThemeData.grey900Dark
+                                      : AppThemeData.grey900,
+                                  weight: FontWeight.w600,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                FittedBox(
+                                  alignment: Alignment.centerLeft,
+                                  fit: BoxFit.scaleDown,
+                                  child: StarRating(
+                                    size: 16,
+                                    rating: double.tryParse(
+                                            data.moyenneDriver.toString()) ??
+                                        0.0,
+                                    color: AppThemeData.warning200,
                                   ),
                                 ),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                height: 50,
-                                width: 50,
-                                decoration: BoxDecoration(
-                                  color: AppThemeData.grey200,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Iconsax.user,
-                                  color: AppThemeData.grey400,
-                                  size: 24,
-                                ),
-                              ),
+                              ],
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Customer Info
-                        Expanded(
-                          child: data.rideType! == 'driver' &&
-                                  data.existingUserId.toString() == "null"
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    CustomText(
-                                      text: data.userInfo?.name ??
-                                          '${data.prenom ?? ''} ${data.nom ?? ''}'
-                                              .trim(),
-                                      size: 15,
-                                      color: isDarkMode
-                                          ? AppThemeData.grey900Dark
-                                          : AppThemeData.grey900,
-                                      weight: FontWeight.w600,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    CustomText(
-                                      text: data.userInfo?.email ??
-                                          data.phone ??
-                                          '',
-                                      size: 12,
-                                      color: isDarkMode
-                                          ? AppThemeData.grey500Dark
-                                          : AppThemeData.grey500,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                )
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    CustomText(
-                                      text:
-                                          '${data.prenom.toString()} ${data.nom.toString()}',
-                                      size: 15,
-                                      color: isDarkMode
-                                          ? AppThemeData.grey900Dark
-                                          : AppThemeData.grey900,
-                                      weight: FontWeight.w600,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 6),
-                                    FittedBox(
-                                      alignment: Alignment.centerLeft,
-                                      fit: BoxFit.scaleDown,
-                                      child: StarRating(
-                                        size: 16,
-                                        rating: double.tryParse(data
-                                                .moyenneDriver
-                                                .toString()) ??
-                                            0.0,
-                                        color: AppThemeData.warning200,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
+                    ),
                     const SizedBox(width: 12),
                     // Keep the controls in the same row as in the original
                     // card design, while reserving a fixed width for them.
@@ -799,20 +793,7 @@ class _NewRideScreenState extends State<NewRideScreen>
                                 color: Colors.transparent,
                                 child: InkWell(
                                   onTap: () async {
-                                    // Open external map with directions
-                                    await Constant.redirectMap(
-                                      departureName: data.departName.toString(),
-                                      originLat: double.tryParse(
-                                          data.latitudeDepart.toString()),
-                                      originLng: double.tryParse(
-                                          data.longitudeDepart.toString()),
-                                      arriveName:
-                                          data.destinationName.toString(),
-                                      latitude: double.tryParse(
-                                          data.latitudeArrivee.toString()),
-                                      longLatitude: double.tryParse(
-                                          data.longitudeArrivee.toString()),
-                                    );
+                                    await _openRideNavigation(data);
                                   },
                                   borderRadius: BorderRadius.circular(12),
                                   child: Container(
@@ -1399,19 +1380,7 @@ class _NewRideScreenState extends State<NewRideScreen>
                                   : AppThemeData.grey100,
                               borderRadius: 10,
                               ontap: () async {
-                                // Open external map with directions
-                                await Constant.redirectMap(
-                                  departureName: data.departName.toString(),
-                                  originLat: double.tryParse(
-                                      data.latitudeDepart.toString()),
-                                  originLng: double.tryParse(
-                                      data.longitudeDepart.toString()),
-                                  arriveName: data.destinationName.toString(),
-                                  latitude: double.tryParse(
-                                      data.latitudeArrivee.toString()),
-                                  longLatitude: double.tryParse(
-                                      data.longitudeArrivee.toString()),
-                                );
+                                await _openRideNavigation(data);
                               },
                             ),
                           ),

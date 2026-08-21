@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cabme_driver/common/widget/button.dart';
 import 'package:cabme_driver/common/widget/custom_app_bar.dart';
@@ -24,10 +25,38 @@ class WaitingApprovalScreen extends StatefulWidget {
   State<WaitingApprovalScreen> createState() => _WaitingApprovalScreenState();
 }
 
-class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
+class _WaitingApprovalScreenState extends State<WaitingApprovalScreen>
+    with WidgetsBindingObserver {
   bool _isRefreshing = false;
+  Timer? _approvalStatusTimer;
 
-  Future<void> _refreshStatus() async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Check immediately, then keep checking while the account is pending.
+    _refreshStatus(showFeedback: false);
+    _approvalStatusTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshStatus(showFeedback: false),
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _approvalStatusTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshStatus(showFeedback: false);
+    }
+  }
+
+  Future<void> _refreshStatus({bool showFeedback = true}) async {
     if (_isRefreshing) return;
 
     setState(() {
@@ -37,7 +66,7 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
     try {
       UserModel? currentUserModel = Constant.getUserData();
       if (currentUserModel.userData == null) {
-        ShowToastDialog.showToast('No user data found'.tr);
+        if (showFeedback) ShowToastDialog.showToast('No user data found'.tr);
         setState(() {
           _isRefreshing = false;
         });
@@ -63,40 +92,43 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
           UserModel? updatedUserModel = UserModel.fromJson(responseBody);
           Preferences.setString(Preferences.user, jsonEncode(updatedUserModel));
 
-          final isVerified = (updatedUserModel.userData?.isVerified == "yes" ||
-              updatedUserModel.userData?.isVerified == 1);
-          final statut = (updatedUserModel.userData?.statut == "yes");
+          final isVerified = updatedUserModel.userData?.isVerified == "yes";
+          final statut = updatedUserModel.userData?.statut == "yes";
           final isFullyApproved = isVerified && statut;
 
           if (isFullyApproved) {
             // Status updated - approved!
-            ShowToastDialog.showToast('Your account has been approved!'.tr);
+            _approvalStatusTimer?.cancel();
+            if (showFeedback) {
+              ShowToastDialog.showToast('Your account has been approved!'.tr);
+            }
             Get.offAll(() => DashBoard());
           } else {
             // Still waiting
-            ShowToastDialog.showToast('Your account is still under review.'.tr);
-            setState(() {
-              _isRefreshing = false;
-            });
+            if (showFeedback) {
+              ShowToastDialog.showToast(
+                  'Your account is still under review.'.tr);
+            }
+            if (mounted) setState(() => _isRefreshing = false);
           }
         } else {
-          ShowToastDialog.showToast(
-              responseBody['error'] ?? 'Failed to check status'.tr);
-          setState(() {
-            _isRefreshing = false;
-          });
+          if (showFeedback) {
+            ShowToastDialog.showToast(
+                responseBody['error'] ?? 'Failed to check status'.tr);
+          }
+          if (mounted) setState(() => _isRefreshing = false);
         }
       } else {
-        ShowToastDialog.showToast('Failed to check status'.tr);
-        setState(() {
-          _isRefreshing = false;
-        });
+        if (showFeedback) {
+          ShowToastDialog.showToast('Failed to check status'.tr);
+        }
+        if (mounted) setState(() => _isRefreshing = false);
       }
     } catch (e) {
-      ShowToastDialog.showToast('Error checking status: ${e.toString()}'.tr);
-      setState(() {
-        _isRefreshing = false;
-      });
+      if (showFeedback) {
+        ShowToastDialog.showToast('Error checking status: ${e.toString()}'.tr);
+      }
+      if (mounted) setState(() => _isRefreshing = false);
     }
   }
 
@@ -106,10 +138,8 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
     final isDarkMode = themeChange.getThem();
 
     UserModel? userModel = Constant.getUserData();
-    final isVerified = (userModel.userData?.isVerified == "yes" ||
-        // ignore: unrelated_type_equality_checks
-        userModel.userData?.isVerified == 1);
-    final statut = (userModel.userData?.statut == "yes");
+    final isVerified = userModel.userData?.isVerified == "yes";
+    final statut = userModel.userData?.statut == "yes";
 
     // Check if fully approved
     final isFullyApproved = isVerified && statut;
@@ -122,170 +152,178 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
       backgroundColor:
           isDarkMode ? AppThemeData.surface50Dark : AppThemeData.surface50,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: isFullyApproved
-                      ? AppThemeData.success50
-                      : AppThemeData.yellow,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isFullyApproved ? Iconsax.tick_circle : Iconsax.clock,
-                  size: 80,
-                  color: isFullyApproved
-                      ? AppThemeData.success300
-                      : AppThemeData.warning200,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Title
-              CustomText(
-                text: isFullyApproved
-                    ? "Account Approved!".tr
-                    : "Waiting for Approval".tr,
-                size: 24,
-                weight: FontWeight.bold,
-                align: TextAlign.center,
-                color: isDarkMode
-                    ? AppThemeData.grey900Dark
-                    : AppThemeData.grey900,
-              ),
-              const SizedBox(height: 16),
-
-              // Message
-              CustomText(
-                text: isFullyApproved
-                    ? "Congratulations! Your driver account has been approved. You can now start receiving ride requests."
-                        .tr
-                    : "Your account is currently under review. Our admin team will review your documents and vehicle information. You will receive a notification once your account is approved."
-                        .tr,
-                size: 16,
-                weight: FontWeight.w400,
-                align: TextAlign.center,
-                color: isDarkMode
-                    ? AppThemeData.grey500Dark
-                    : AppThemeData.grey500,
-              ),
-              const SizedBox(height: 48),
-
-              // Status indicators
-              if (!isFullyApproved) ...[
-                _buildStatusItem(
-                  context,
-                  "Documents Submitted".tr,
-                  "Your documents are being reviewed".tr,
-                  Iconsax.document,
-                  isDarkMode,
-                ),
-                const SizedBox(height: 16),
-                _buildStatusItem(
-                  context,
-                  "Vehicle Information Submitted".tr,
-                  "Your vehicle details are being reviewed".tr,
-                  Iconsax.car,
-                  isDarkMode,
-                ),
-                const SizedBox(height: 32),
-              ],
-
-              // Action button
-              if (isFullyApproved)
-                CustomButton(
-                  btnName: "Go to Dashboard".tr,
-                  ontap: () {
-                    Get.offAll(() => DashBoard());
-                  },
-                ),
-
-              // Action buttons for waiting approval
-              if (!isFullyApproved) ...[
-                const SizedBox(height: 24),
-                // Check Status button
-                CustomButton(
-                  btnName: _isRefreshing
-                      ? "Checking Status...".tr
-                      : "Check Status".tr,
-                  ontap: _isRefreshing ? null : _refreshStatus,
-                  isOutlined: false,
-                ),
-                const SizedBox(height: 16),
-                // Logout button
-                TextButton(
-                  onPressed: () async {
-                    // Show confirmation dialog
-                    final shouldLogout = await Get.dialog<bool>(
-                      AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        title: CustomText(
-                          text: 'Log Out'.tr,
-                          size: 20,
-                          weight: FontWeight.w600,
-                        ),
-                        content: CustomText(
-                          text:
-                              'Are you sure you want to log out? You can log in again with a different account.'
-                                  .tr,
-                          size: 16,
-                          weight: FontWeight.w400,
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Get.back(result: false),
-                            child: CustomText(
-                              text: 'Cancel'.tr,
-                              size: 16,
-                              weight: FontWeight.w500,
-                              color: isDarkMode
-                                  ? AppThemeData.grey400Dark
-                                  : AppThemeData.grey400,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => Get.back(result: true),
-                            child: CustomText(
-                              text: 'Log Out'.tr,
-                              size: 16,
-                              weight: FontWeight.w600,
-                              color: AppThemeData.error50,
-                            ),
-                          ),
-                        ],
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 48),
+              child: IntrinsicHeight(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Icon
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: isFullyApproved
+                            ? AppThemeData.success50
+                            : AppThemeData.yellow,
+                        shape: BoxShape.circle,
                       ),
-                    );
+                      child: Icon(
+                        isFullyApproved ? Iconsax.tick_circle : Iconsax.clock,
+                        size: 80,
+                        color: isFullyApproved
+                            ? AppThemeData.success300
+                            : AppThemeData.warning200,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
 
-                    if (shouldLogout == true) {
-                      // Clear all preferences
-                      Preferences.clearKeyData(Preferences.isLogin);
-                      Preferences.clearKeyData(Preferences.user);
-                      Preferences.clearKeyData(Preferences.userId);
-                      Preferences.clearKeyData(Preferences.accesstoken);
-                      // Clear API header
-                      API.header['accesstoken'] = '';
-                      Get.offAll(() => const LoginScreen());
-                    }
-                  },
-                  child: CustomText(
-                    text: "Log Out".tr,
-                    size: 16,
-                    weight: FontWeight.w500,
-                    color: isDarkMode
-                        ? AppThemeData.grey500Dark
-                        : AppThemeData.grey500,
-                  ),
+                    // Title
+                    CustomText(
+                      text: isFullyApproved
+                          ? "Account Approved!".tr
+                          : "Waiting for Approval".tr,
+                      size: 24,
+                      weight: FontWeight.bold,
+                      align: TextAlign.center,
+                      color: isDarkMode
+                          ? AppThemeData.grey900Dark
+                          : AppThemeData.grey900,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Message
+                    CustomText(
+                      text: isFullyApproved
+                          ? "Congratulations! Your driver account has been approved. You can now start receiving ride requests."
+                              .tr
+                          : "Your account is currently under review. Our admin team will review your documents and vehicle information. You will receive a notification once your account is approved."
+                              .tr,
+                      size: 16,
+                      weight: FontWeight.w400,
+                      align: TextAlign.center,
+                      color: isDarkMode
+                          ? AppThemeData.grey500Dark
+                          : AppThemeData.grey500,
+                    ),
+                    const SizedBox(height: 48),
+
+                    // Status indicators
+                    if (!isFullyApproved) ...[
+                      _buildStatusItem(
+                        context,
+                        "Documents Submitted".tr,
+                        "Your documents are being reviewed".tr,
+                        Iconsax.document,
+                        isDarkMode,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildStatusItem(
+                        context,
+                        "Vehicle Information Submitted".tr,
+                        "Your vehicle details are being reviewed".tr,
+                        Iconsax.car,
+                        isDarkMode,
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+
+                    // Action button
+                    if (isFullyApproved)
+                      CustomButton(
+                        btnName: "Go to Dashboard".tr,
+                        ontap: () {
+                          Get.offAll(() => DashBoard());
+                        },
+                      ),
+
+                    // Action buttons for waiting approval
+                    if (!isFullyApproved) ...[
+                      const SizedBox(height: 24),
+                      // Check Status button
+                      CustomButton(
+                        btnName: _isRefreshing
+                            ? "Checking Status...".tr
+                            : "Check Status".tr,
+                        ontap: _isRefreshing ? null : _refreshStatus,
+                        isOutlined: false,
+                      ),
+                      const SizedBox(height: 16),
+                      // Logout button
+                      TextButton(
+                        onPressed: () async {
+                          // Show confirmation dialog
+                          final shouldLogout = await Get.dialog<bool>(
+                            AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              title: CustomText(
+                                text: 'Log Out'.tr,
+                                size: 20,
+                                weight: FontWeight.w600,
+                              ),
+                              content: CustomText(
+                                text:
+                                    'Are you sure you want to log out? You can log in again with a different account.'
+                                        .tr,
+                                size: 16,
+                                weight: FontWeight.w400,
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Get.back(result: false),
+                                  child: CustomText(
+                                    text: 'Cancel'.tr,
+                                    size: 16,
+                                    weight: FontWeight.w500,
+                                    color: isDarkMode
+                                        ? AppThemeData.grey400Dark
+                                        : AppThemeData.grey400,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => Get.back(result: true),
+                                  child: CustomText(
+                                    text: 'Log Out'.tr,
+                                    size: 16,
+                                    weight: FontWeight.w600,
+                                    color: AppThemeData.error50,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (shouldLogout == true) {
+                            // Clear all preferences
+                            Preferences.clearKeyData(Preferences.isLogin);
+                            Preferences.clearKeyData(Preferences.user);
+                            Preferences.clearKeyData(Preferences.userId);
+                            Preferences.clearKeyData(Preferences.accesstoken);
+                            // Clear API header
+                            API.header['accesstoken'] = '';
+                            Get.offAll(() => const LoginScreen());
+                          }
+                        },
+                        child: CustomText(
+                          text: "Log Out".tr,
+                          size: 16,
+                          weight: FontWeight.w500,
+                          color: isDarkMode
+                              ? AppThemeData.grey500Dark
+                              : AppThemeData.grey500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ),

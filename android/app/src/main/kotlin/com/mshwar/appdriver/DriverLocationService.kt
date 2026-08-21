@@ -96,9 +96,12 @@ class DriverLocationService : Service() {
             acquire()
         }
 
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15_000L)
-            .setMinUpdateIntervalMillis(10_000L)
-            .setMaxUpdateDelayMillis(15_000L)
+        // The admin panel treats a recent position as a live/green driver.
+        // Request and upload a heartbeat every five seconds while the driver
+        // is explicitly online and this foreground service is running.
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L)
+            .setMinUpdateIntervalMillis(5_000L)
+            .setMaxUpdateDelayMillis(5_000L)
             .setMinUpdateDistanceMeters(0f)
             .build()
         callback = object : LocationCallback() {
@@ -117,7 +120,7 @@ class DriverLocationService : Service() {
             }
         }
         scheduler = Executors.newSingleThreadScheduledExecutor().also { executor ->
-            executor.scheduleAtFixedRate({ lastLocation?.let(::upload) }, 15, 15, TimeUnit.SECONDS)
+            executor.scheduleAtFixedRate({ lastLocation?.let(::upload) }, 5, 5, TimeUnit.SECONDS)
         }
         Log.i(TAG, "Foreground driver location tracking started")
     }

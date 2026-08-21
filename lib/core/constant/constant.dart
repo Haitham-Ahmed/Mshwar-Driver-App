@@ -340,22 +340,16 @@ class Constant {
     Future<bool> launchMap(MapType mapType) async {
       bool? isAvailable = await MapLauncher.isMapAvailable(mapType);
       if (isAvailable == true) {
-        if (hasOrigin) {
-          await MapLauncher.showDirections(
-            mapType: mapType,
-            directionsMode: DirectionsMode.driving,
-            destination: destination,
-            destinationTitle: arriveName,
-            origin: origin,
-            originTitle: departureName,
-          );
-        } else {
-          await MapLauncher.showMarker(
-            mapType: mapType,
-            coords: destination,
-            title: arriveName!,
-          );
-        }
+        // Leave origin empty when it is not explicitly provided. Google Maps
+        // then starts navigation from the driver's live device location.
+        await MapLauncher.showDirections(
+          mapType: mapType,
+          directionsMode: DirectionsMode.driving,
+          destination: destination,
+          destinationTitle: arriveName,
+          origin: origin,
+          originTitle: departureName,
+        );
         return true;
       }
       return false;

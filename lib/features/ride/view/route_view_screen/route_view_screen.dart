@@ -112,11 +112,10 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
           double.parse(rideData!.latitudeArrivee.toString()),
           double.parse(rideData!.longitudeArrivee.toString()));
 
-      // Show initial route and markers with ride's departure coordinates
-      getDirections(
-        dLat: double.parse(rideData!.latitudeDepart.toString()),
-        dLng: double.parse(rideData!.longitudeDepart.toString()),
-      );
+      // The route must always start at the driver's real position.  Before the
+      // ride starts its destination is the pickup point; once it starts it is
+      // the passenger's final destination (see getDirections below).
+      _showRouteFromCurrentLocation();
 
       // Set up the appropriate listener based on status (will update with real-time location)
       _setupDriverLocationListener();
@@ -124,6 +123,46 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
       // Start actively updating driver's location to Firebase
       _startUpdatingLocationToFirebase();
     }
+  }
+
+  /// Gets one immediate GPS fix so the first route is not drawn from the
+  /// pickup location. Firebase updates continue to keep it current afterwards.
+  Future<void> _showRouteFromCurrentLocation() async {
+    try {
+      final location = await Location().getLocation();
+      if (location.latitude == null || location.longitude == null) return;
+
+      _updateDriverPosition(
+        latitude: location.latitude!,
+        longitude: location.longitude!,
+        heading: location.heading ?? 0.0,
+      );
+    } catch (error) {
+      // A later Firebase/GPS update will draw the route if an immediate fix is
+      // unavailable (for example while the location permission is resolving).
+      print('Unable to get current driver location: $error');
+    }
+  }
+
+  void _updateDriverPosition({
+    required double latitude,
+    required double longitude,
+    required double heading,
+  }) {
+    if (!mounted || latitude == 0.0 || longitude == 0.0) return;
+
+    final position = LatLng(latitude, longitude);
+    setState(() {
+      departureLatLong = position;
+      _markers['driver'] = Marker(
+        markerId: const MarkerId('driver'),
+        infoWindow: InfoWindow(title: rideData!.prenomConducteur.toString()),
+        position: position,
+        icon: taxiIcon ?? BitmapDescriptor.defaultMarker,
+        rotation: heading,
+      );
+    });
+    getDirections(dLat: latitude, dLng: longitude);
   }
 
   // Helper method to set up driver location listener based on current status
@@ -152,19 +191,16 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
 
           // Only update if coordinates are valid (not 0, 0)
           if (driverLat != 0.0 && driverLng != 0.0) {
-            // Update driver location on map
-            setState(() {
-              departureLatLong = LatLng(driverLat, driverLng);
-              _markers[rideData!.id.toString()] = Marker(
-                  markerId: MarkerId(rideData!.id.toString()),
-                  infoWindow:
-                      InfoWindow(title: rideData!.prenomConducteur.toString()),
-                  position: departureLatLong,
-                  icon: taxiIcon!,
-                  rotation:
-                      double.parse(driverLocationUpdate.rotation.toString()));
-              getDirections(dLat: driverLat, dLng: driverLng);
-            });
+            // Update the route from the driver's live location. This targets
+            // pickup while confirmed and the final destination while on ride.
+            _updateDriverPosition(
+              latitude: driverLat,
+              longitude: driverLng,
+              heading: double.tryParse(
+                    driverLocationUpdate.rotation.toString(),
+                  ) ??
+                  0.0,
+            );
 
             // Auto-follow driver position if in navigation mode
             if (isNavigationMode &&
@@ -263,6 +299,14 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
             print('🚗 Driver App - Invalid location data');
             return;
           }
+
+          // Do not wait for Firebase to echo the update back before changing
+          // the route, especially just after the driver starts the trip.
+          _updateDriverPosition(
+            latitude: currentLocation.latitude!,
+            longitude: currentLocation.longitude!,
+            heading: currentLocation.heading ?? 0.0,
+          );
 
           print(
               '🚗 Driver App - Updating location to Firebase: ${currentLocation.latitude}, ${currentLocation.longitude}');
@@ -1034,6 +1078,9 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
                                               _setupDriverLocationListener();
                                               // Restart location updates to Firebase
                                               _startUpdatingLocationToFirebase();
+                                              // Switch immediately from the pickup route
+                                              // to the final-destination route.
+                                              _showRouteFromCurrentLocation();
 
                                               // Use Get.dialog to avoid context issues
                                               if (mounted) {
@@ -1221,6 +1268,9 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
                                                                           _setupDriverLocationListener();
                                                                           // Restart location updates to Firebase
                                                                           _startUpdatingLocationToFirebase();
+                                                                          // Switch immediately from the pickup route
+                                                                          // to the final-destination route.
+                                                                          _showRouteFromCurrentLocation();
 
                                                                           // Use Get.dialog to avoid context issues
                                                                           if (mounted) {
